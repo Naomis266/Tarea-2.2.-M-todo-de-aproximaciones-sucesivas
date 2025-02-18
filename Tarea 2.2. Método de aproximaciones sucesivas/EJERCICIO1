@@ -1,0 +1,134 @@
+#   Codigo que implementa el esquema numerico 
+#   de punto fijo para determinar la raiz de
+#   una ecuacion
+# 
+#           Autor:
+#   Daniel Enrique Cantón Estrada
+#   daniel_beisbolista@hotmail.es
+#   Version 1.3 : 14/02/2025
+#
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Definir funciones g(x) para cada ejercicio
+
+def g_ejercicio_1(x):
+    return (x**2 + 1) / 3
+
+def g_ejercicio_2(x):
+    x_valid = np.where(3*x - 1 >= 0, x, np.nan)  # Evitar valores negativos en la raíz
+    return np.sqrt(3*x_valid - 1)
+
+def g_ejercicio_3(x):
+    return np.cos(x)
+
+# Derivadas para criterio de convergencia
+
+def g_prime_ejercicio_1(x):
+    return (2*x) / 3
+
+def g_prime_ejercicio_2(x):
+    x_valid = np.where(3*x - 1 > 0, x, np.nan)
+    return np.where(np.isnan(x_valid), np.nan, (3 / (2 * np.sqrt(3*x_valid - 1))))
+
+def g_prime_ejercicio_3(x):
+    return -np.sin(x)
+
+# Error absoluto
+def error_absoluto(x_new, x_old):
+    return abs(x_new - x_old)
+
+# Error relativo
+def error_relativo(x_new, x_old):
+    return abs((x_new - x_old) / x_new) if x_new != 0 else np.nan
+
+# Error cuadrático
+def error_cuadratico(x_new, x_old):
+    return (x_new - x_old)**2
+
+# Método de punto fijo
+def punto_fijo(g, x0, tol=1e-5, max_iter=100):
+    iteraciones = []
+    errores_abs = []
+    errores_rel = []
+    errores_cuad = []
+
+    x_old = x0
+    for i in range(max_iter):
+        x_new = g(x_old)
+        if np.isnan(x_new):  # Verificar valores no válidos
+            print("Iteración detenida: valor no definido.")
+            break
+        
+        e_abs = error_absoluto(x_new, x_old)
+        e_rel = error_relativo(x_new, x_old)
+        e_cuad = error_cuadratico(x_new, x_old)
+
+        iteraciones.append((i+1, x_new, e_abs, e_rel, e_cuad))
+        errores_abs.append(e_abs)
+        errores_rel.append(e_rel)
+        errores_cuad.append(e_cuad)
+
+        if e_abs < tol:
+            break
+
+        x_old = x_new
+
+    return iteraciones, errores_abs, errores_rel, errores_cuad
+
+# Ejecutar para cada ejercicio
+parametros = [
+    (g_ejercicio_1, 1.5, "Ejercicio 1"),
+    (g_ejercicio_2, 1.5, "Ejercicio 2"),
+    (g_ejercicio_3, 0.5, "Ejercicio 3")
+]
+
+for g_func, x0, titulo in parametros:
+    print(f"\n{titulo}")
+    iteraciones, errores_abs, errores_rel, errores_cuad = punto_fijo(g_func, x0)
+    
+    print("Iteración | x_n      | Error absoluto | Error relativo | Error cuadrático")
+    print("-----------------------------------------------------------------------")
+    for it in iteraciones:
+        print(f"{it[0]:9d} | {it[1]:.6f} | {it[2]:.6e} | {it[3]:.6e} | {it[4]:.6e}")
+    
+    # Graficar la convergencia
+    x_vals = np.linspace(-1, 2, 100)
+    y_vals = g_func(x_vals)
+    y_vals = np.where(np.isnan(y_vals), 0, y_vals)  # Evitar valores NaN en la gráfica
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(x_vals, y_vals, label=f"{titulo} g(x)", color="blue")
+    plt.plot(x_vals, x_vals, linestyle="dashed", color="red", label="y = x")
+    
+    if iteraciones:
+        x_points = [it[1] for it in iteraciones]
+        y_points = g_func(np.array(x_points))
+        y_points = np.where(np.isnan(y_points), 0, y_points)
+        plt.scatter(x_points, y_points, color="black", zorder=3, label="Iteraciones")
+        plt.plot(x_points, y_points, linestyle="dotted", color="black")
+    
+    plt.xlabel("x")
+    plt.ylabel("g(x)")
+    plt.legend()
+    plt.grid(True)
+    plt.title(f"Método de Punto Fijo - {titulo}")
+    plt.savefig(f"punto_fijo_{titulo.replace(' ', '_').lower()}.png")
+    plt.show()
+
+    # Graficar errores
+    if iteraciones:
+        plt.figure(figsize=(8, 5))
+        plt.plot(range(1, len(errores_abs) + 1), errores_abs, marker="o", label="Error absoluto")
+        plt.plot(range(1, len(errores_rel) + 1), errores_rel, marker="s", label="Error relativo")
+        plt.plot(range(1, len(errores_cuad) + 1), errores_cuad, marker="^", label="Error cuadrático")
+
+        plt.xlabel("Iteración")
+        plt.ylabel("Error")
+        plt.yscale("log")
+        plt.legend()
+        plt.grid(True)
+        plt.title(f"Evolución de los Errores - {titulo}")
+        plt.savefig(f"errores_punto_fijo_{titulo.replace(' ', '_').lower()}.png")
+        plt.show()
